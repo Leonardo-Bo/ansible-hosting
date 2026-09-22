@@ -2,5 +2,44 @@
 - name: Setup mang server
   hosts: mang
   become: true
+  vars:
+    deploy_user: mang
+    app_dir: "/srv/{{ deploy_user }}/app"
+
   roles:
-    - bootstrap
+    - role: bootstrap
+
+    - role: deploy-user
+
+    - role: nodejs
+
+    - role: app-deploy
+      vars:
+        app_repo_url: "git@github.com:<org>/mang.git"
+        app_dest: "{{ app_dir }}"
+        app_branch: main
+        app_owner: "{{ deploy_user }}"
+        app_build_commands:
+          - "npm ci"
+          - "npm run build"
+        app_service_name: mang
+
+    - role: systemd-service
+      vars:
+        service_name: mang
+        service_description: "MANG contact form service (Astro/Node)"
+        service_user: "{{ deploy_user }}"
+        service_group: "{{ deploy_user }}"
+        service_working_directory: "{{ app_dir }}"
+        service_exec_start: "/usr/bin/node dist/server/entry.mjs"
+        service_environment:
+          PORT: "4321"
+          HOST: "127.0.0.1"
+        use_socket: false
+
+    - role: caddy
+      vars:
+        caddy_domain: mangsrl.com
+        caddy_root: "{{ app_dir }}/dist/client"
+        caddy_proxy_path: /api/contact
+        caddy_proxy_target: "127.0.0.1:4321"
