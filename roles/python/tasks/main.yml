@@ -1,0 +1,73 @@
+---
+- name: Python | Ensure system is up to date
+  apt:
+    upgrade: safe
+    update_cache: True
+    force_apt_get: True
+  notify: clean aptcache
+
+- name: Python | Install required packages
+  apt:
+    name: [
+      build-essential, zlib1g-dev, libncurses5-dev, 
+      libgdbm-dev, libnss3-dev, libssl-dev, 
+      libreadline-dev, libffi-dev, libsqlite3-dev, 
+      wget, curl, llvm, tk-dev, libbz2-dev, liblzma-dev, 
+      libgdbm-dev, libncursesw5-dev, libdb-dev, libexpat1-dev, 
+      libpcap-dev, liblzma-dev, libxml2-dev, libxmlsec1-dev, 
+      libjpeg-dev, libfreetype6-dev, checkinstall
+    ]
+    state: present
+    update_cache: True
+    force_apt_get: True
+  notify: clean aptcache
+
+- name: Python | Ensure /opt/python and /opt/python/src exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /opt/python
+    - /opt/python/src
+
+- name: Python | Download and unarchive source code
+  ansible.builtin.unarchive:
+    src: "https://www.python.org/ftp/python/{{ item }}/Python-{{ item }}.tgz"
+    dest: /opt/python/src/
+    creates: "/opt/python/src/Python-{{ item }}"
+    remote_src: yes
+    owner: root
+    group: root
+  loop: "{{ python_versions }}"
+
+- name: Python | Configure
+  ansible.builtin.command: "./configure --enable-optimizations --prefix=/opt/python/{{ item }}"
+  args:
+    chdir: "/opt/python/src/Python-{{ item }}"
+    creates: "/opt/python/{{ item }}/bin/python{{ item.split('.')[:2] | join('.') }}"
+  loop: "{{ python_versions }}"
+
+- name: Python | Compile and install
+  ansible.builtin.shell: "make -j$(nproc) && make altinstall"
+  args:
+    chdir: "/opt/python/src/Python-{{ item }}"
+    creates: "/opt/python/{{ item }}/bin/python{{ item.split('.')[:2] | join('.') }}"
+  loop: "{{ python_versions }}"
+
+- name: Python | Ensure module directory exists
+  ansible.builtin.file:
+    path: /opt/modules/python
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Python | Add modulefile
+  ansible.builtin.template:
+    src: python.j2
+    dest: "/opt/modules/python/{{ item }}.lua"
+  vars:
+    python_version: "{{ item }}"
+  loop: "{{ python_versions }}"
+

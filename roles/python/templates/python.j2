@@ -1,0 +1,21 @@
+-- Python module {{ python_version }}
+whatis("Name: Python")
+whatis("Version: {{ python_version }}")
+
+-- Installation path
+local python_root = "/opt/python/{{ python_version }}"
+local python_major_minor = string.match("{{ python_version }}", "^%d+%.%d+")
+
+-- Add bin and lib in environment
+prepend_path("PATH", pathJoin(python_root, "bin"))
+prepend_path("LD_LIBRARY_PATH", pathJoin(python_root, "lib"))
+
+-- Add site-packages to PYTHONPATH
+prepend_path("PYTHONPATH", pathJoin(python_root, "lib/python" .. python_major_minor .. "/site-packages"))
+
+-- Set environment variables
+setenv("PYTHON_VERSION", "{{ python_version }}")
+setenv("PYTHON_HOME", python_root)
+setenv("PYTHON_BIN", pathJoin(python_root, "bin"))
+setenv("PYTHON_LIB", pathJoin(python_root, "lib"))
+setenv("PYTHON_INCLUDE", pathJoin(python_root, "include"))
