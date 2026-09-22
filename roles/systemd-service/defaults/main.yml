@@ -1,0 +1,11 @@
+---
+service_name: ""
+service_description: ""
+service_user: ""
+service_group: "{{ service_user }}"
+service_working_directory: ""
+service_exec_start: ""
+service_environment: {}
+
+use_socket: false
+socket_path: "/run/{{ service_name }}.sock"

@@ -1,0 +1,10 @@
+[Unit]
+Description=Socket for {{ service_name }}
+
+[Socket]
+ListenStream={{ socket_path }}
+SocketUser={{ service_user }}
+SocketGroup={{ service_group }}
+
+[Install]
+WantedBy=sockets.target

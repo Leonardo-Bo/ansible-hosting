@@ -1,0 +1,21 @@
+[Unit]
+Description={{ service_description }}
+After=network.target{% if use_socket %} {{ service_name }}.socket{% endif %}
+
+{% if use_socket %}
+Requires={{ service_name }}.socket
+{% endif %}
+[Service]
+Type=simple
+User={{ service_user }}
+Group={{ service_group }}
+WorkingDirectory={{ service_working_directory }}
+ExecStart={{ service_exec_start }}
+{% for key, value in service_environment.items() %}
+Environment={{ key }}={{ value }}
+{% endfor %}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
