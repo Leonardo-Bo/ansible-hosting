@@ -1,0 +1,17 @@
+---
+- name: Clone or update repository
+  ansible.builtin.git:
+    repo: "{{ app_repo_url }}"
+    dest: "{{ app_dest }}"
+    version: "{{ app_branch }}"
+  become_user: "{{ app_owner }}"
+  register: app_repo_state
+  notify: restart app service
+
+- name: Run build commands
+  ansible.builtin.command: "{{ item }}"
+  args:
+    chdir: "{{ app_dest }}"
+  loop: "{{ app_build_commands }}"
+  become_user: "{{ app_owner }}"
+  when: app_repo_state.changed
