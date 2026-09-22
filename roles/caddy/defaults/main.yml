@@ -1,0 +1,7 @@
+---
+caddy_sites_dir: /etc/caddy/sites
+
+caddy_domain: ""
+caddy_root: ""
+caddy_proxy_path: ""
+caddy_proxy_target: ""

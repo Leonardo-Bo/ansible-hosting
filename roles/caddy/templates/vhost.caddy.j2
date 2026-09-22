@@ -1,0 +1,15 @@
+{{ caddy_domain }} {
+{% if caddy_proxy_path %}
+    handle {{ caddy_proxy_path }} {
+        reverse_proxy {{ caddy_proxy_target }}
+    }
+
+    handle {
+        root * {{ caddy_root }}
+        file_server
+    }
+{% else %}
+    root * {{ caddy_root }}
+    file_server
+{% endif %}
+}

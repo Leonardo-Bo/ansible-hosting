@@ -1,0 +1,66 @@
+---
+- name: Install prerequisites for Caddy repository
+  ansible.builtin.apt:
+    name:
+      - debian-keyring
+      - debian-archive-keyring
+      - apt-transport-https
+      - curl
+      - gnupg
+    state: present
+
+- name: Add Caddy GPG key
+  ansible.builtin.shell: |
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+  args:
+    creates: /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+
+- name: Add Caddy apt repository list
+  ansible.builtin.shell: |
+    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+  args:
+    creates: /etc/apt/sources.list.d/caddy-stable.list
+
+- name: Update apt cache after adding Caddy repository
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Install Caddy
+  ansible.builtin.apt:
+    name: caddy
+    state: present
+
+- name: Allow HTTP/HTTPS through ufw
+  ansible.builtin.command: "ufw allow {{ item }}"
+  loop:
+    - "80/tcp"
+    - "443/tcp"
+    - "443/udp"
+  register: ufw_result
+  changed_when: "'Skipping' not in ufw_result.stdout"
+
+- name: Ensure Caddy sites directory exists
+  ansible.builtin.file:
+    path: "{{ caddy_sites_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Ensure Caddyfile imports sites directory
+  ansible.builtin.lineinfile:
+    path: /etc/caddy/Caddyfile
+    line: "import {{ caddy_sites_dir }}/*"
+    insertbefore: BOF
+    create: true
+
+- name: Deploy vhost file for this site
+  ansible.builtin.template:
+    src: vhost.caddy.j2
+    dest: "{{ caddy_sites_dir }}/{{ caddy_domain }}.caddy"
+    mode: "0644"
+  notify: reload caddy
+
+- name: Ensure Caddy is enabled and running
+  ansible.builtin.systemd:
+    name: caddy
+    enabled: true
+    state: started
