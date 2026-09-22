@@ -1,0 +1,4 @@
+---
+deploy_user: ""
+deploy_group: "{{ deploy_user }}"
+deploy_home: "/srv/{{ deploy_user }}"
