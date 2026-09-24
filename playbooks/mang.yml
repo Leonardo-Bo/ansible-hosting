@@ -8,12 +8,16 @@
 
   roles:
     - role: bootstrap
+      tags: [bootstrap]
 
     - role: deploy-user
+      tags: [deploy-user]
 
     - role: nodejs
+      tags: [nodejs]
 
     - role: app-deploy
+      tags: [app-deploy]
       vars:
         app_repo_url: "git@github.com:mang-srl/mang-website.git"
         app_dest: "{{ app_dir }}"
@@ -25,6 +29,7 @@
         app_service_name: mang
 
     - role: systemd-service
+      tags: [systemd-service]
       vars:
         service_name: mang
         service_description: "MANG contact form service (Astro/Node)"
@@ -38,6 +43,7 @@
         use_socket: false
 
     - role: caddy
+      tags: [caddy]
       vars:
         caddy_domain: mangsrl.com
         caddy_root: "{{ app_dir }}/dist/client"
