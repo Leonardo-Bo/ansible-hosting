@@ -15,6 +15,7 @@
       - ufw
       - fail2ban
       - unattended-upgrades
+      - acl
     state: present
 
 - name: Enable unattended-upgrades
