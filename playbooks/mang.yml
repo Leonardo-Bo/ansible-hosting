@@ -15,9 +15,9 @@
 
     - role: app-deploy
       vars:
-        app_repo_url: "git@github.com:<org>/mang.git"
+        app_repo_url: "git@github.com:mang-srl/mang-website.git"
         app_dest: "{{ app_dir }}"
-        app_branch: main
+        app_branch: master
         app_owner: "{{ deploy_user }}"
         app_build_commands:
           - "npm ci"
