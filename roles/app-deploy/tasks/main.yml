@@ -1,12 +1,47 @@
 ---
+- name: Add GitHub to system-wide known_hosts
+  ansible.builtin.known_hosts:
+    name: github.com
+    key: "{{ lookup('pipe', 'ssh-keyscan -t ed25519 github.com') }}"
+    path: /etc/ssh/ssh_known_hosts
+    state: present
+
+- name: Mark app directory as safe for git
+  community.general.git_config:
+    name: safe.directory
+    scope: global
+    value: "{{ app_dest }}"
+
 - name: Clone or update repository
   ansible.builtin.git:
     repo: "{{ app_repo_url }}"
     dest: "{{ app_dest }}"
     version: "{{ app_branch }}"
-  become_user: "{{ app_owner }}"
+  become_flags: '-H -S -n -E'
   register: app_repo_state
   notify: restart app service
+
+- name: Ensure correct ownership of app directory
+  ansible.builtin.file:
+    path: "{{ app_dest }}"
+    owner: "{{ app_owner }}"
+    group: "{{ app_owner }}"
+    recurse: true
+    state: directory
+
+- name: Deploy .env file
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ app_dest }}/.env"
+    owner: "{{ app_owner }}"
+    group: "{{ app_owner }}"
+    mode: "0600"
+  notify: restart app service
+
+- name: Check if build output already exists
+  ansible.builtin.stat:
+    path: "{{ app_dest }}/dist/client/index.html"
+  register: build_output
 
 - name: Run build commands
   ansible.builtin.command: "{{ item }}"
@@ -14,4 +49,7 @@
     chdir: "{{ app_dest }}"
   loop: "{{ app_build_commands }}"
   become_user: "{{ app_owner }}"
-  when: app_repo_state.changed
+  environment:
+    HOME: "{{ app_dest }}"
+    npm_config_cache: "{{ app_dest }}/.npm-cache"
+  when: app_repo_state.changed or not build_output.stat.exists
