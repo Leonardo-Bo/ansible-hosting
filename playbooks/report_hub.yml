@@ -1,0 +1,102 @@
+---
+# report_hub (github.com/mang-srl/report-hub) on the host `mang`, beside mang's site (D-93 in
+# report_hub's docs/decisions.md). Each role is tagged with its own name:
+#   ansible-playbook playbooks/report_hub.yml --tags deploy-user --ask-vault-pass
+# A new version of the code: --tags app-deploy (pull, build, migrate, restart).
+- name: Setup report_hub on the mang server
+  hosts: mang
+  become: true
+  vars:
+    deploy_user: report_hub
+    report_hub_home: "/srv/{{ deploy_user }}"
+    report_hub_app_dir: "{{ report_hub_home }}/app"
+    report_hub_venv: "{{ report_hub_home }}/venv"
+    report_hub_storage_dir: "{{ report_hub_home }}/storage"
+    report_hub_port: 8000
+    report_hub_domain: report.mangsrl.com
+    report_hub_content_domain: content.report.mangsrl.com
+    report_hub_sender: noreply@mangsrl.com  # an alias of the SMTP mailbox (vault_smtp_user)
+    report_hub_services: [report_hub, report_hub-notifications]
+    # The version report_hub is developed and tested with; built under /opt/python/<version>,
+    # the system's Python (mang's) is not touched.
+    python_versions:
+      - "3.14.7"
+    report_hub_python: "/opt/python/3.14.7/bin/python3.14"
+    # Secrets kept outside the vault, on this computer only:
+    # - Keycloak's clients of the realm mang, written by ~/Systemadmin/keycloak/setup_mang.py;
+    # - Django's SECRET_KEY, generated once into .secrets/ (git-ignored) and reused.
+    report_hub_keycloak: "{{ lookup('ansible.builtin.file', '~/Systemadmin/keycloak/mang-secrets.json') | from_json }}"
+    report_hub_secret_key: "{{ lookup('ansible.builtin.password', playbook_dir + '/../.secrets/report_hub_secret_key', chars=['ascii_letters', 'digits'], length=64) }}"
+    report_hub_django_env:
+      DJANGO_SETTINGS_MODULE: backend.settings_prod
+
+  roles:
+    - role: deploy-user
+      tags: [deploy-user]
+
+    - role: python
+      tags: [python]
+
+    - role: postgresql
+      tags: [postgresql]
+
+    - role: postgresql-db
+      tags: [postgresql-db]
+      vars:
+        pg_db_name: report_hub
+        pg_db_user: report_hub
+        pg_db_password: "{{ vault_report_hub_db_password }}"
+
+    - role: report-hub-config
+      tags: [report-hub-config]
+
+    # The code, the venv (everything installed inside it), the frontend, the database schema.
+    - role: app-deploy
+      tags: [app-deploy]
+      vars:
+        app_repo_url: "git@github.com:mang-srl/report-hub.git"
+        app_dest: "{{ report_hub_app_dir }}"
+        app_branch: develop
+        app_owner: "{{ deploy_user }}"
+        app_env_template: ""
+        app_build_check: frontend/dist/index.html
+        app_build_environment: "{{ report_hub_django_env }}"
+        app_build_commands:
+          - "{{ report_hub_python }} -m venv {{ report_hub_venv }}"
+          - "{{ report_hub_venv }}/bin/pip install --upgrade pip"
+          - "{{ report_hub_venv }}/bin/pip install ./backend[prod]"
+          - "npm --prefix frontend ci"
+          - "npm --prefix frontend run build"
+          - "npm --prefix frontend run build:annotator"
+          - "{{ report_hub_venv }}/bin/python backend/manage.py collectstatic --noinput"
+          - "{{ report_hub_venv }}/bin/python backend/manage.py migrate --noinput"
+          - "{{ report_hub_venv }}/bin/python backend/manage.py check --deploy --fail-level ERROR"
+        app_service_name: "{{ report_hub_services }}"
+
+    - role: systemd-service
+      tags: [systemd-service]
+      vars:
+        service_name: report_hub
+        service_description: "report_hub (gunicorn)"
+        service_user: "{{ deploy_user }}"
+        service_working_directory: "{{ report_hub_app_dir }}/backend"
+        service_exec_start: "{{ report_hub_venv }}/bin/gunicorn backend.wsgi:application --bind 127.0.0.1:{{ report_hub_port }} --workers 3 --timeout 120"
+        # HOME: gunicorn and Python write there (the system user has no home of its own).
+        service_environment: "{{ report_hub_django_env | combine({'HOME': report_hub_home}) }}"
+
+    - role: systemd-service
+      tags: [systemd-service]
+      vars:
+        service_name: report_hub-notifications
+        service_description: "report_hub notification emails (send_notifications --loop)"
+        service_user: "{{ deploy_user }}"
+        service_working_directory: "{{ report_hub_app_dir }}/backend"
+        service_exec_start: "{{ report_hub_venv }}/bin/python manage.py send_notifications --loop"
+        # HOME: gunicorn and Python write there (the system user has no home of its own).
+        service_environment: "{{ report_hub_django_env | combine({'HOME': report_hub_home}) }}"
+
+    - role: caddy
+      tags: [caddy]
+      vars:
+        caddy_domain: "{{ report_hub_domain }}"
+        caddy_template: report_hub.caddy.j2

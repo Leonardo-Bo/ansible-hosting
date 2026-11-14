@@ -1,0 +1,14 @@
+---
+- name: restart report_hub services
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    state: restarted
+    daemon_reload: true
+  loop: "{{ report_hub_services }}"
+  failed_when: false  # the first time the services do not exist yet
+
+# A restart, not a reload: a running process does not get a new group.
+- name: restart caddy for report_hub
+  ansible.builtin.systemd:
+    name: caddy
+    state: restarted

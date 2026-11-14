@@ -1,0 +1,29 @@
+---
+# report_hub's configuration (/etc/report_hub_config.json, read by backend/settings_prod.py)
+# and its storage folder. Readable by root and the app's user only.
+- name: Storage folder (uploaded reports)
+  ansible.builtin.file:
+    path: "{{ report_hub_storage_dir }}"
+    state: directory
+    owner: "{{ deploy_user }}"
+    group: "{{ deploy_user }}"
+    mode: "0755"
+
+- name: Configuration file
+  ansible.builtin.template:
+    src: report_hub_config.json.j2
+    dest: /etc/report_hub_config.json
+    owner: root
+    group: "{{ deploy_user }}"
+    mode: "0640"
+  no_log: true
+  notify: restart report_hub services
+
+# Caddy serves the report files itself after Django's check (X-Accel-Redirect, D-37): it reads
+# them through the app's group (folders 750, files 640), and never writes.
+- name: Caddy in the app's group, to read the report files
+  ansible.builtin.user:
+    name: caddy
+    groups: "{{ deploy_user }}"
+    append: true
+  notify: restart caddy for report_hub

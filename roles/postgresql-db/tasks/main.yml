@@ -1,0 +1,21 @@
+---
+- name: Install psycopg2 for Ansible's PostgreSQL modules
+  ansible.builtin.apt:
+    name: python3-psycopg2
+    state: present
+
+- name: Create the database role
+  community.postgresql.postgresql_user:
+    name: "{{ pg_db_user }}"
+    password: "{{ pg_db_password }}"
+    role_attr_flags: NOSUPERUSER,NOCREATEDB,NOCREATEROLE
+  become_user: postgres
+  no_log: true
+
+- name: Create the database, owned by that role
+  community.postgresql.postgresql_db:
+    name: "{{ pg_db_name }}"
+    owner: "{{ pg_db_user }}"
+    encoding: UTF-8
+    template: template0
+  become_user: postgres

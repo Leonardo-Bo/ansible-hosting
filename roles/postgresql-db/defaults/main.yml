@@ -1,0 +1,5 @@
+---
+# A database and the role that owns it, on the local PostgreSQL (role postgresql).
+pg_db_name: ""
+pg_db_user: ""
+pg_db_password: ""  # from the vault

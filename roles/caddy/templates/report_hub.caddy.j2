@@ -1,0 +1,45 @@
+# report_hub: the app and its content origin. From report_hub's deploy/Caddyfile.example: keep
+# the two in step (a header added there, or in Django's content_headers, is added here too).
+# No `log` directive: the URLs carry viewer tokens and presentation links.
+
+{{ caddy_domain }} {
+	# The app's Content-Security-Policy, as report_hub's apps/organizations/hosts.py (D-38).
+	header Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; frame-src https://{{ report_hub_content_domain }}; img-src 'self' data:; style-src 'self' 'unsafe-inline'"
+
+	# Uploads: 100 MiB of zip plus the form (D-28).
+	request_body /api/* {
+		max_size 101MiB
+	}
+
+	handle /api/* {
+		reverse_proxy 127.0.0.1:{{ report_hub_port }}
+	}
+	handle /admin/* {
+		reverse_proxy 127.0.0.1:{{ report_hub_port }}
+	}
+	handle_path /static/* {
+		root * {{ report_hub_app_dir }}/backend/staticfiles
+		file_server
+	}
+	handle {
+		root * {{ report_hub_app_dir }}/frontend/dist
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# Content: report files only, through Django's access check, then X-Accel-Redirect (D-37).
+{{ report_hub_content_domain }} {
+	reverse_proxy 127.0.0.1:{{ report_hub_port }} {
+		@accel header X-Accel-Redirect *
+		handle_response @accel {
+			root {{ report_hub_storage_dir }}/versions
+			rewrite {rp.header.X-Accel-Redirect}
+			method GET
+			copy_response_headers {
+				include Content-Type Referrer-Policy X-Content-Type-Options Content-Security-Policy Cache-Control
+			}
+			file_server
+		}
+	}
+}
