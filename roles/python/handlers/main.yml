@@ -1,0 +1,4 @@
+---
+- name: clean aptcache
+  ansible.builtin.apt:
+    autoclean: true

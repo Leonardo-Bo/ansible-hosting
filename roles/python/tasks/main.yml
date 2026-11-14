@@ -9,13 +9,13 @@
 - name: Python | Install required packages
   apt:
     name: [
-      build-essential, zlib1g-dev, libncurses5-dev, 
+      build-essential, zlib1g-dev, libncurses-dev, 
       libgdbm-dev, libnss3-dev, libssl-dev, 
       libreadline-dev, libffi-dev, libsqlite3-dev, 
       wget, curl, llvm, tk-dev, libbz2-dev, liblzma-dev, 
-      libgdbm-dev, libncursesw5-dev, libdb-dev, libexpat1-dev, 
+      libdb-dev, libexpat1-dev, 
       libpcap-dev, liblzma-dev, libxml2-dev, libxmlsec1-dev, 
-      libjpeg-dev, libfreetype6-dev, checkinstall
+      libjpeg-dev, libfreetype-dev, checkinstall
     ]
     state: present
     update_cache: True
