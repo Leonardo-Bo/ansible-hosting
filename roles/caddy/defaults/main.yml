@@ -5,3 +5,5 @@ caddy_domain: ""
 caddy_root: ""
 caddy_proxy_path: ""
 caddy_proxy_target: ""
+# The site's file: the generic one, or a template of its own (e.g. report_hub.caddy.j2).
+caddy_template: vhost.caddy.j2

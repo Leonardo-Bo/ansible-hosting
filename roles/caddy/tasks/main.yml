@@ -54,7 +54,7 @@
 
 - name: Deploy vhost file for this site
   ansible.builtin.template:
-    src: vhost.caddy.j2
+    src: "{{ caddy_template }}"
     dest: "{{ caddy_sites_dir }}/{{ caddy_domain }}.caddy"
     mode: "0644"
   notify: reload caddy

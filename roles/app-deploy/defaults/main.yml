@@ -4,4 +4,11 @@ app_dest: ""
 app_branch: main
 app_owner: ""
 app_build_commands: []
+# One service or a list: restarted when the code or the .env changes.
 app_service_name: ""
+# The .env written next to the code; "" for an app that reads its configuration elsewhere.
+app_env_template: env.j2
+# A file the build makes: no build output yet means build even if the code did not change.
+app_build_check: dist/client/index.html
+# Extra environment for the build commands.
+app_build_environment: {}

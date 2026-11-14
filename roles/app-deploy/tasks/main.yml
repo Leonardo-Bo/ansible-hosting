@@ -31,16 +31,17 @@
 
 - name: Deploy .env file
   ansible.builtin.template:
-    src: env.j2
+    src: "{{ app_env_template }}"
     dest: "{{ app_dest }}/.env"
     owner: "{{ app_owner }}"
     group: "{{ app_owner }}"
     mode: "0600"
+  when: app_env_template | length > 0
   notify: restart app service
 
 - name: Check if build output already exists
   ansible.builtin.stat:
-    path: "{{ app_dest }}/dist/client/index.html"
+    path: "{{ app_dest }}/{{ app_build_check }}"
   register: build_output
 
 - name: Run build commands
@@ -49,7 +50,5 @@
     chdir: "{{ app_dest }}"
   loop: "{{ app_build_commands }}"
   become_user: "{{ app_owner }}"
-  environment:
-    HOME: "{{ app_dest }}"
-    npm_config_cache: "{{ app_dest }}/.npm-cache"
+  environment: "{{ {'HOME': app_dest, 'npm_config_cache': app_dest + '/.npm-cache'} | combine(app_build_environment) }}"
   when: app_repo_state.changed or not build_output.stat.exists
