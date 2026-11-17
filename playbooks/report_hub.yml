@@ -56,7 +56,7 @@
       vars:
         app_repo_url: "git@github.com:mang-srl/report-hub.git"
         app_dest: "{{ report_hub_app_dir }}"
-        app_branch: develop
+        app_branch: master
         app_owner: "{{ deploy_user }}"
         app_env_template: ""
         app_build_check: frontend/dist/index.html
