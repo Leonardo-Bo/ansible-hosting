@@ -16,6 +16,9 @@
     report_hub_domain: report.mangsrl.com
     report_hub_content_domain: content.report.mangsrl.com
     report_hub_sender: noreply@mangsrl.com  # an alias of the SMTP mailbox (vault_smtp_user)
+    # SSL on 465, as OVH's Zimbra panel says: what left through 587 STARTTLS arrived with no
+    # DKIM signature (2026-11-21). Only report_hub's: the site's contact form keeps the vault's.
+    report_hub_smtp_port: 465
     report_hub_services: [report_hub, report_hub-notifications]
     # The version report_hub is developed and tested with; built under /opt/python/<version>,
     # the system's Python (mang's) is not touched.
